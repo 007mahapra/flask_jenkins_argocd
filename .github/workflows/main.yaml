@@ -39,15 +39,17 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name == 'push' }}   # ← only push on merge to main, not on PRs
+          push: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
           tags: ghcr.io/${{ github.repository_owner }}/flask-jenkins-argocd:${{ github.run_number }}
 
       - name: Update image tag in k8s/deployment.yaml
-        if: github.event_name == 'push'              # ← only run on merge to main, not on PRs
+        if: github.event_name == 'push' 
         run: |
           sed -i 's|image: ghcr.io/.*/flask-jenkins-argocd:.*|image: ghcr.io/${{ github.repository_owner }}/flask-jenkins-argocd:${{ github.run_number }}|' k8s/deployment.yaml
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add k8s/deployment.yaml
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
           git commit -m "ci: update image tag to ${{ github.run_number }}"
+          git pull --rebase origin main
           git push
