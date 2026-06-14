@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "007maha/python_flask"
+        IMAGE_NAME = "ghcr.io/007mahapra/python_flask"
         IMAGE_TAG  = "${BUILD_NUMBER}"  // unique tag per build
     }
 
@@ -19,20 +19,36 @@ pipeline {
             }
         }
 
-        stage("Push to Docker Hub") {
+        // stage("Push to Docker Hub") {
+        //     steps {
+        //         withCredentials([usernamePassword(
+        //             credentialsId: "dockerhub_pat",
+        //             usernameVariable: "DOCKER_USER",
+        //             passwordVariable: "DOCKER_PASS"
+        //         )]) {
+        //             sh """
+        //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+        //                 docker push ${IMAGE_NAME}:${IMAGE_TAG}
+        //             """
+        //         }
+        //     }
+        // }
+        stage("Push to GHCR") {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "dockerhub_pat",
-                    usernameVariable: "DOCKER_USER",
-                    passwordVariable: "DOCKER_PASS"
+                    credentialsId: "github-creds",       // same cred you already have for git push
+                    usernameVariable: "GIT_USER",
+                    passwordVariable: "GIT_PASS"
                 )]) {
                     sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "$GIT_PASS" | docker login ghcr.io -u "$GIT_USER" --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
             }
         }
+
+
 
         stage("Update image tag in repo") {
             steps {
